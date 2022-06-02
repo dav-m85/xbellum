@@ -4,11 +4,15 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
+	"net"
 	"net/http"
 	"os"
 	"strings"
 
+	"github.com/dav-m85/xbellum/vfs"
 	"github.com/dav-m85/xbellum/xbel"
+	"golang.org/x/net/webdav"
 )
 
 func check(err error) {
@@ -23,15 +27,29 @@ func main() {
 	flag.Parse()
 
 	args := flag.Args()
-	if len(args) != 2 {
-		fmt.Println("Usage: ")
-		fmt.Println("Usage: go run main.go [-c] <input> <output>")
-		flag.PrintDefaults()
-		os.Exit(1)
-	}
+	// if len(args) != 2 {
+	// 	fmt.Println("Usage: go run main.go [-c] <input> <output>")
+	// 	flag.PrintDefaults()
+	// 	os.Exit(1)
+	// }
 
 	switch args[0] {
-	case "inplace":
+	case "server":
+		wh := webdav.Handler{
+			FileSystem: vfs.VFS{},
+			LockSystem: webdav.NewMemLS(),
+			Logger: func(r *http.Request, e error) {
+				log.Printf("%s %s", r, e)
+			},
+		}
+		listener, err := net.Listen("tcp", "127.0.0.1:8082")
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("Serving on %s", listener.Addr())
+		if err := http.Serve(listener, &wh); err != nil {
+			log.Print("shutting server", err)
+		}
 	}
 
 	// nx := walk(xbel, func(b Bookmark) bool {
