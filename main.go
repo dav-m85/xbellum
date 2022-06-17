@@ -39,7 +39,7 @@ func main() {
 			FileSystem: vfs.VFS{},
 			LockSystem: webdav.NewMemLS(),
 			Logger: func(r *http.Request, e error) {
-				log.Printf("%s %s", r, e)
+				log.Printf("%s %s ERR:%s", r.Method, r.URL, e)
 			},
 		}
 		listener, err := net.Listen("tcp", "127.0.0.1:8082")
