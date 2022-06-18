@@ -36,7 +36,7 @@ func main() {
 	switch args[0] {
 	case "server":
 		wh := webdav.Handler{
-			FileSystem: vfs.VFS{},
+			FileSystem: vfs.NewVFS(),
 			LockSystem: webdav.NewMemLS(),
 			Logger: func(r *http.Request, e error) {
 				log.Printf("%s %s ERR:%s", r.Method, r.URL, e)
