@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/dav-m85/xbellum/store"
 	"github.com/dav-m85/xbellum/vfs"
 	"github.com/dav-m85/xbellum/xbel"
 	"golang.org/x/net/webdav"
@@ -35,8 +36,10 @@ func main() {
 
 	switch args[0] {
 	case "server":
+		st := store.NewStore()
+
 		wh := webdav.Handler{
-			FileSystem: vfs.NewVFS(),
+			FileSystem: vfs.NewVFS(st),
 			LockSystem: webdav.NewMemLS(),
 			Logger: func(r *http.Request, e error) {
 				log.Printf("%s %s ERR:%s", r.Method, r.URL, e)
@@ -46,8 +49,18 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		serve := func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/info" {
+				st.ServeHTTP(w, r)
+			} else {
+				wh.ServeHTTP(w, r)
+			}
+
+		}
+
 		log.Printf("Serving on %s", listener.Addr())
-		if err := http.Serve(listener, &wh); err != nil {
+		if err := http.Serve(listener, Server(serve)); err != nil {
 			log.Print("shutting server", err)
 		}
 	}
@@ -105,4 +118,10 @@ func inplace(input, output string) {
 	defer outFile.Close()
 
 	xbel.Write(outFile, nx)
+}
+
+type Server func(w http.ResponseWriter, r *http.Request)
+
+func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s(w, r)
 }

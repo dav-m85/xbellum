@@ -1,7 +1,6 @@
 package vfs
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"time"
@@ -29,11 +28,15 @@ type memFile struct {
 	nameSnapshot     string
 	childrenSnapshot []os.FileInfo
 	// pos is protected by n.mu.
-	pos int
+	pos     int
+	onClose func(*memFile) error
+	written bool
 }
 
 func (f *memFile) Close() error {
-	// Todo leverage close to decice what to do with this file :)
+	if f.onClose != nil {
+		return f.onClose(f)
+	}
 	return nil
 }
 
@@ -105,10 +108,11 @@ func (f *memFile) Stat() (os.FileInfo, error) {
 }
 
 func (f *memFile) Write(p []byte) (int, error) {
-	fmt.Printf("WRITE %s", string(p))
 	lenp := len(p)
 	f.n.mu.Lock()
 	defer f.n.mu.Unlock()
+
+	f.written = true
 
 	if f.n.mode.IsDir() {
 		return 0, os.ErrInvalid

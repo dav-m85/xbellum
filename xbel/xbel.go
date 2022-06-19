@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"io"
+	"sort"
 )
 
 const SUPPORTED_VERSION = "1.0"
@@ -54,6 +55,47 @@ func Write(out io.Writer, nx *XBEL) {
 
 // Filter keeps the passed Bookmark when true
 type Filter func(b *Bookmark) bool
+
+func Bookmarks(x *XBEL) (res []*Bookmark) {
+	Walk(x, func(b *Bookmark) bool {
+		res = append(res, b)
+		return false
+	})
+	return
+}
+
+// Diff does a dual exclusion, returning only bookmarks that are unique to
+// a, or b.
+func Diff(a, b []*Bookmark) (onlyA, onlyB []*Bookmark) {
+	am := make(map[string]*Bookmark)
+	bm := make(map[string]*Bookmark)
+	for _, x := range a {
+		am[x.Href] = x // am contains all a
+	}
+	for _, x := range b {
+		if _, ok := am[x.Href]; !ok {
+			bm[x.Href] = x // bm yields only b this way
+		} else {
+			delete(am, x.Href) // remove from am those that are in b
+		}
+	}
+	// flatten a and b
+	for _, x := range am {
+		onlyA = append(onlyA, x)
+	}
+	for _, x := range bm {
+		onlyB = append(onlyB, x)
+	}
+	sort.Sort(sortByHref(onlyA))
+	sort.Sort(sortByHref(onlyB))
+	return
+}
+
+type sortByHref []*Bookmark
+
+func (a sortByHref) Len() int           { return len(a) }
+func (a sortByHref) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a sortByHref) Less(i, j int) bool { return a[i].Href < a[j].Href }
 
 // Walk modifies passed XBEL file with a Filter
 func Walk(x *XBEL, filter Filter) *XBEL {

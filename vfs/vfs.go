@@ -13,17 +13,32 @@ import (
 	"golang.org/x/net/webdav"
 )
 
+type Store interface {
+	Get() ([]byte, error)
+	Set([]byte) error
+}
+
 var _ webdav.FileSystem = &VFS{}
 
 type VFS struct {
 	mu   sync.Mutex
 	xbel *memFSNode
 	lock *memFSNode
+	set  func([]byte) error
 }
 
 // NewMemFS returns a new in-memory FileSystem implementation.
-func NewVFS() webdav.FileSystem {
-	return &VFS{}
+func NewVFS(r Store) webdav.FileSystem {
+	vfs := &VFS{set: r.Set}
+	res, err := r.Get()
+	if err == nil {
+		vfs.xbel = &memFSNode{
+			mode: 0,
+			data: res,
+		}
+	}
+
+	return vfs
 }
 
 type memFSNode struct {
@@ -138,10 +153,22 @@ func (fs *VFS) OpenFile(ctx context.Context, name string, flag int, perm os.File
 	for cName, c := range n.children {
 		children = append(children, c.stat(cName))
 	}
+	onClose := func(*memFile) error { return nil }
+
+	if name == "/bookmarks.xbel" {
+		onClose = func(f *memFile) error {
+			if f.written {
+				return fs.set(f.n.data)
+			}
+			return nil
+		}
+	}
+
 	return &memFile{
 		n:                n,
 		nameSnapshot:     frag,
 		childrenSnapshot: children,
+		onClose:          onClose,
 	}, nil
 }
 

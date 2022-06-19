@@ -9,6 +9,7 @@ require (
 )
 
 require (
+	github.com/matryer/is v1.4.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/tools v0.0.0-20191112195655-aa38f8e97acc // indirect
