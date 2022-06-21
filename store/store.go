@@ -101,7 +101,7 @@ func (s *Store) DiffAll() ([]Diff, error) {
 		// Compare parent and v
 		vb := xbel.Bookmarks(v.xb)
 		pb := xbel.Bookmarks(parent.xb)
-		added, removed := xbel.Diff(vb, pb)
+		added, removed := xbel.Diff(vb, pb) // logic error here
 		if len(added) > 0 || len(removed) > 0 {
 			diffs = append(diffs, Diff{
 				Version:       v.id,

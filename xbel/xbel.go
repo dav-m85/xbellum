@@ -58,8 +58,9 @@ type Filter func(b *Bookmark) bool
 
 func Bookmarks(x *XBEL) (res []*Bookmark) {
 	Walk(x, func(b *Bookmark) bool {
-		res = append(res, b)
-		return false
+		nb := *b
+		res = append(res, &nb)
+		return true // false yeilds weird results on limits
 	})
 	return
 }
@@ -70,21 +71,22 @@ func Diff(a, b []*Bookmark) (onlyA, onlyB []*Bookmark) {
 	am := make(map[string]*Bookmark)
 	bm := make(map[string]*Bookmark)
 	for _, x := range a {
-		am[x.Href] = x // am contains all a
+		nx := *x
+		am[x.Href] = &nx // am contains all a
 	}
 	for _, x := range b {
-		if _, ok := am[x.Href]; !ok {
-			bm[x.Href] = x // bm yields only b this way
-		} else {
-			delete(am, x.Href) // remove from am those that are in b
+		nx := *x
+		bm[x.Href] = &nx // bm contains all b
+	}
+	for k, x := range bm {
+		if _, ok := am[k]; !ok {
+			onlyB = append(onlyB, x)
 		}
 	}
-	// flatten a and b
-	for _, x := range am {
-		onlyA = append(onlyA, x)
-	}
-	for _, x := range bm {
-		onlyB = append(onlyB, x)
+	for k, x := range am {
+		if _, ok := bm[k]; !ok {
+			onlyA = append(onlyA, x)
+		}
 	}
 	sort.Sort(sortByHref(onlyA))
 	sort.Sort(sortByHref(onlyB))
