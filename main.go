@@ -1,18 +1,19 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/dav-m85/xbellum/store"
 	"github.com/dav-m85/xbellum/vfs"
 	"github.com/dav-m85/xbellum/xbel"
+	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/net/webdav"
 )
 
@@ -34,9 +35,12 @@ func main() {
 	// 	os.Exit(1)
 	// }
 
+	st := store.NewStore()
+
 	switch args[0] {
 	case "server":
-		st := store.NewStore()
+		// TODO generate password ans store it in file on first run
+		saved := "secret"
 
 		wh := webdav.Handler{
 			FileSystem: vfs.NewVFS(st),
@@ -51,45 +55,73 @@ func main() {
 		}
 
 		serve := func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+
+			// Gets the correct user for this request.
+			username, password, ok := r.BasicAuth()
+
+			if !ok {
+				http.Error(w, "Not authorized", http.StatusUnauthorized)
+				return
+			}
+
+			if !checkPassword(saved, password) {
+				http.Error(w, "Not authorized", http.StatusUnauthorized)
+				return
+			}
+
+			_ = username
+			// fmt.Println("Hello ", username)
+
 			if r.URL.Path == "/info" {
 				st.ServeHTTP(w, r)
 			} else {
 				wh.ServeHTTP(w, r)
 			}
-
 		}
 
 		log.Printf("Serving on %s", listener.Addr())
 		if err := http.Serve(listener, Server(serve)); err != nil {
 			log.Print("shutting server", err)
 		}
-	}
 
-	// nx := walk(xbel, func(b Bookmark) bool {
-	// 	fmt.Println(b.Href)
-	// 	return true
-	// })
-
-	// Remove duplicates
-}
-
-func inplace(input, output string) {
-	buf, err := ioutil.ReadFile(input)
-	check(err)
-
-	x, err := xbel.Parse(buf)
-
-	hrefs := make(map[string]struct{})
-	nx := xbel.Walk(x, func(b *xbel.Bookmark) bool {
-		if _, exists := hrefs[b.Href]; exists {
-			fmt.Println("Duplicate " + b.Href)
-			return false
+	case "dedup":
+		buf, _ := st.Get()
+		x, err := xbel.Parse(buf)
+		if err != nil {
+			log.Fatal(err)
 		}
 
-		hrefs[b.Href] = struct{}{}
+		hrefs := make(map[string]struct{})
+		nx := xbel.Walk(x, func(b *xbel.Bookmark) bool {
+			if _, exists := hrefs[b.Href]; exists {
+				log.Println("Duplicate " + b.Href)
+				return false
+			}
 
-		// Lets findout if still ok
-		if false && strings.HasPrefix(b.Href, "https://example.com") {
+			hrefs[b.Href] = struct{}{}
+
+			return true
+		})
+
+		b := bytes.NewBuffer([]byte{})
+		xbel.Write(b, nx)
+
+		err = st.Set(b.Bytes())
+		if err != nil {
+			log.Fatal(err)
+		}
+
+	case "check":
+		buf, _ := st.Get()
+		x, err := xbel.Parse(buf)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		xbel.Walk(x, func(b *xbel.Bookmark) bool {
+			// Lets findout if still ok
+			// if false && strings.HasPrefix(b.Href, "https://example.com") {
 			fmt.Println("Checking " + b.Href)
 			resp, err := http.Get(b.Href)
 			// handle the error if there is one
@@ -108,20 +140,22 @@ func inplace(input, output string) {
 				fmt.Println("DEAD")
 				b.Title = "[DEAD] " + b.Title
 			}
-		}
-
-		return true
-	})
-
-	outFile, err := os.Create(output)
-	check(err)
-	defer outFile.Close()
-
-	xbel.Write(outFile, nx)
+			return true
+		})
+	}
 }
 
 type Server func(w http.ResponseWriter, r *http.Request)
 
 func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s(w, r)
+}
+
+func checkPassword(saved, input string) bool {
+	if strings.HasPrefix(saved, "{bcrypt}") {
+		savedPassword := strings.TrimPrefix(saved, "{bcrypt}")
+		return bcrypt.CompareHashAndPassword([]byte(savedPassword), []byte(input)) == nil
+	}
+
+	return saved == input
 }

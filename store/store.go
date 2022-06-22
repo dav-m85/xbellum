@@ -81,13 +81,9 @@ func (s *Store) Set(d []byte) error {
 	fn := fmt.Sprintf("./data/bkm_%06d.xbel", s.increment)
 	fmt.Printf("Set to increment %d\n", s.increment)
 
-	xb, err := xbel.Parse(d)
-	if err != nil {
-		panic(err)
-	}
 	s.versions = append(s.versions, version{
 		id:      fn,
-		xb:      xb,
+		xb:      xbel.MustParse(d),
 		created: time.Now(),
 	})
 	// TODO If different from actual, record new instance
@@ -101,7 +97,7 @@ func (s *Store) DiffAll() ([]Diff, error) {
 		// Compare parent and v
 		vb := xbel.Bookmarks(v.xb)
 		pb := xbel.Bookmarks(parent.xb)
-		added, removed := xbel.Diff(vb, pb) // logic error here
+		added, removed := xbel.Diff(vb, pb)
 		if len(added) > 0 || len(removed) > 0 {
 			diffs = append(diffs, Diff{
 				Version:       v.id,

@@ -32,6 +32,14 @@ type Bookmark struct {
 	Href  string `xml:"href,attr"`
 }
 
+func MustParse(buf []byte) *XBEL {
+	xbel, err := Parse(buf)
+	if err != nil {
+		panic(err)
+	}
+	return xbel
+}
+
 func Parse(buf []byte) (*XBEL, error) {
 	xbel := new(XBEL)
 	err := xml.Unmarshal(buf, &xbel)
