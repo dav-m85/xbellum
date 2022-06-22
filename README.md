@@ -1,8 +1,31 @@
 # xbellum
-Multitool for xbel files
+Dedicated webdav server for [Floccus](https://floccus.org).
 
-    # floccus PUSH ONCE
-    scp charlie:/data/webdav/data/bookmarks.xbel .
-    go run main.go
-    scp out.xbel charlie:/data/webdav/data/bookmarks.xbel
-    # floccus PULL ONCE
+Main reason of existence is to list all revisions of the bookmarks set managed by
+[Floccus](https://floccus.org). I had to convince myself it wasn't deleting bookmarks randomly.
+
+With time, it became also a tool to deduplicate and check bookmarks.
+
+Code is provided as is, pretty rough on the edges. Tinker at will.
+
+## Usage
+
+    # Change the password first in main.go:43
+    go run main.go help
+    go run main.go server
+
+Configure your floccus with:
+- Type: XBEL file on WebDAV server
+- URL: http://127.0.0.1:8082
+- Username: Any
+- Password: the one in main.go:43
+- File: bookmarks.xbel
+- File Password: none
+
+Then open your browser at localhost:8082/info, username any, password you just set.
+
+Add/Remove some bookmarks, and push/pull floccus, you should see something like this:
+
+![Screenshot](screenshot.png)
+
+A dockerfile is provided in case you fancy it.
