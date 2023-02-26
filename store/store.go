@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"time"
@@ -21,20 +22,22 @@ type Store struct {
 	increment int
 	// mu        sync.Mutex
 	versions []version
+	root     string
 }
 
-func NewStore() *Store {
+func NewStore(root string) *Store {
 	reg := regexp.MustCompile(`^bkm_(\d{6}).xbel$`)
-	fs, err := ioutil.ReadDir("./data")
+	fs, err := ioutil.ReadDir(root)
 	if err != nil {
 		panic(err)
 	}
 	st := Store{
 		versions: make([]version, len(fs)),
+		root:     root,
 	}
 	for _, f := range fs {
 		if m := reg.FindStringSubmatch(f.Name()); m != nil {
-			re, err := ioutil.ReadFile("./data/" + f.Name())
+			re, err := ioutil.ReadFile(filepath.Join(root, f.Name()))
 			if err != nil {
 				panic(err)
 			}
@@ -78,7 +81,7 @@ func (s *Store) Get() ([]byte, error) {
 
 func (s *Store) Set(d []byte) error {
 	s.increment++
-	fn := fmt.Sprintf("./data/bkm_%06d.xbel", s.increment)
+	fn := filepath.Join(s.root, fmt.Sprintf("bkm_%06d.xbel", s.increment))
 	fmt.Printf("Set to increment %d\n", s.increment)
 
 	s.versions = append(s.versions, version{

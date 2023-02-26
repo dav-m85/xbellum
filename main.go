@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/dav-m85/xbellum/store"
@@ -17,33 +18,25 @@ import (
 	"golang.org/x/net/webdav"
 )
 
-func check(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
+var secret string = os.Getenv("SECRET")
+var root string = os.Getenv("ROOT")
 
 func main() {
 	var dead bool
 	flag.BoolVar(&dead, "c", false, "check for dead")
 	flag.Parse()
 
-	args := flag.Args()
-	// if len(args) != 2 {
-	// 	fmt.Println("Usage: go run main.go [-c] <input> <output>")
-	// 	flag.PrintDefaults()
-	// 	os.Exit(1)
-	// }
+	if root == "" {
+		root = "./data"
+	}
 
-	st := store.NewStore()
+	args := flag.Args()
+	st := store.NewStore(root)
 
 	switch args[0] {
 	case "server":
-		// TODO generate password ans store it in file on first run
-		saved := "secret"
-
 		wh := webdav.Handler{
-			FileSystem: vfs.NewVFS(st),
+			FileSystem: vfs.NewVFS(st), // os.FS cannot be used here :(
 			LockSystem: webdav.NewMemLS(),
 			Logger: func(r *http.Request, e error) {
 				log.Printf("%s %s ERR:%s", r.Method, r.URL, e)
@@ -58,20 +51,17 @@ func main() {
 			w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
 
 			// Gets the correct user for this request.
-			username, password, ok := r.BasicAuth()
+			_, password, ok := r.BasicAuth()
 
 			if !ok {
 				http.Error(w, "Not authorized", http.StatusUnauthorized)
 				return
 			}
 
-			if !checkPassword(saved, password) {
+			if !checkPassword(secret, password) {
 				http.Error(w, "Not authorized", http.StatusUnauthorized)
 				return
 			}
-
-			_ = username
-			// fmt.Println("Hello ", username)
 
 			if r.URL.Path == "/info" {
 				st.ServeHTTP(w, r)
