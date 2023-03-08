@@ -33,7 +33,13 @@ func main() {
 	args := flag.Args()
 	st := store.NewStore(root)
 
+	if len(args) == 0 {
+		args = append(args, "")
+	}
+
 	switch args[0] {
+	default:
+		log.Fatalln("Usage: go main.go server|dedup|check")
 	case "server":
 		wh := webdav.Handler{
 			FileSystem: vfs.NewVFS(st), // os.FS cannot be used here :(

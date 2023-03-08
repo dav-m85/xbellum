@@ -10,15 +10,15 @@ Code is provided as is, pretty rough on the edges. Tinker at will.
 
 ## Usage
 
-    # Change the password first in main.go:43
+    mkdir data
     go run main.go help
-    go run main.go server
+    SECRET= go run main.go server
 
 Configure your floccus with:
 - Type: XBEL file on WebDAV server
 - URL: http://127.0.0.1:8082
 - Username: Any
-- Password: the one in main.go:43
+- Password: the one in SECRET envvar
 - File: bookmarks.xbel
 - File Password: none
 
