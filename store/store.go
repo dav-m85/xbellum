@@ -95,6 +95,9 @@ func (s *Store) Set(d []byte) error {
 
 func (s *Store) DiffAll() ([]Diff, error) {
 	var diffs []Diff
+	if len(s.versions) == 0 {
+		return diffs, nil
+	}
 	parent := s.versions[0]
 	for _, v := range s.versions[1:] {
 		// Compare parent and v
