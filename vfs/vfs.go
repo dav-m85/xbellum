@@ -95,7 +95,7 @@ func (fs *VFS) OpenFile(ctx context.Context, name string, flag int, perm os.File
 
 	var frag string
 	var n *memFSNode
-	if name == "" {
+	if name == "" || name == "/" {
 		// We're opening the root.
 		if runtime.GOOS == "zos" {
 			if flag&os.O_WRONLY != 0 {
@@ -199,7 +199,7 @@ func (fs *VFS) Stat(ctx context.Context, name string) (os.FileInfo, error) {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
 
-	if name == "" {
+	if name == "" || name == "/" {
 		// We're stat'ting the root.
 		return fs.root().stat("/"), nil
 	}

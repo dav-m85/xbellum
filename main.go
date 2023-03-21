@@ -48,7 +48,7 @@ func main() {
 				log.Printf("%s %s ERR:%s", r.Method, r.URL, e)
 			},
 		}
-		listener, err := net.Listen("tcp", "0.0.0.0:8082")
+		listener, err := net.Listen("tcp", ":8082")
 		if err != nil {
 			log.Fatal(err)
 		}

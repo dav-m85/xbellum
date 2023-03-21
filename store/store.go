@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -32,8 +33,9 @@ func NewStore(root string) *Store {
 		panic(err)
 	}
 	st := Store{
-		versions: make([]version, len(fs)),
-		root:     root,
+		increment: -1,
+		versions:  make([]version, len(fs)),
+		root:      root,
 	}
 	for _, f := range fs {
 		if m := reg.FindStringSubmatch(f.Name()); m != nil {
@@ -59,6 +61,7 @@ func NewStore(root string) *Store {
 			}
 		}
 	}
+	log.Printf("Store increment:%d", st.increment)
 	return &st
 }
 
@@ -82,7 +85,7 @@ func (s *Store) Get() ([]byte, error) {
 func (s *Store) Set(d []byte) error {
 	s.increment++
 	fn := filepath.Join(s.root, fmt.Sprintf("bkm_%06d.xbel", s.increment))
-	fmt.Printf("Set to increment %d\n", s.increment)
+	log.Printf("Store increment:%d", s.increment)
 
 	s.versions = append(s.versions, version{
 		id:      fn,
